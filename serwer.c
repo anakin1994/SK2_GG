@@ -5,6 +5,10 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+
+FILE *loginy;
 
 int indexOf_shift(char* base, char* str, int startIndex)
 {
@@ -82,7 +86,93 @@ void* messageResolver(void* arg)
 		char code[10];
 		memcpy(code, &message[firstIndex+1], lastIndex-firstIndex);
 		code[lastIndex-firstIndex-1] = '\0';
-		printf("%s\n", code);	//Tutaj będziemy odpalać odpowiednie czynności w zależności od zmiennej code
+		printf("%s\n", code);
+		if(strncmp(code, "LOGIN", 5)==0)
+		{
+			firstIndex = lastIndex+1;
+			lastIndex = indexOf_shift(message, ",", firstIndex);
+			char login[50];
+			memcpy(login, &message[firstIndex], lastIndex-firstIndex);
+			login[lastIndex-firstIndex] = '\0';
+			firstIndex=lastIndex;
+			lastIndex = indexOf_shift(message, "END", firstIndex);
+			char password[20];
+			memcpy(password, &message[firstIndex+1], lastIndex-firstIndex-1);
+			
+			if((loginy=fopen("loginy.txt", "r"))==NULL)
+			{
+				printf("Nie ma pliku z loginami");
+			}
+			char login1[50];
+			char password1[20];
+			int ifOk=0;
+			
+			while(fscanf(loginy,"%s %s", login1, password1)!=EOF)
+			{
+				if(strcmp(login, login1)==0 && strcmp(password,password1)==0)
+				{
+					write(client->cfd, "serwer:LOGOK:", 13);
+					ifOk=1;
+					break;
+				}
+			}
+			if(ifOk==0)
+			{
+				write(client->cfd, "serwer:LOGERR:Nie znaleziono loginu.", 36);
+			}
+			
+			fclose(loginy);
+		}
+		else if(strncmp(code, "LOGOUT", 6)==0)
+		{
+			//wyslij logout
+		}
+		else if(strncmp(code, "REGISTER", 8)==0)
+		{
+			firstIndex = lastIndex+1;
+			lastIndex = indexOf_shift(message, ",", firstIndex);
+			char login[50];
+			char password[20];
+			memcpy(login, &message[firstIndex], lastIndex-firstIndex);
+			login[lastIndex-firstIndex] = '\0';
+			firstIndex=lastIndex;
+			lastIndex = indexOf_shift(message, "END", firstIndex);
+			memcpy(password, &message[firstIndex+1], lastIndex-firstIndex-1);
+			if((loginy=fopen("loginy.txt", "a+"))==NULL)
+			{
+				printf("Nie ma pliku z loginami");
+			}
+			char login1[50];
+			char password1[20];
+			int ifOk=1;
+			
+			while(fscanf(loginy,"%s %s", login1, password1)!=EOF)
+			{
+				if(strcmp(login, login1)==0)
+				{
+					printf("Istnieje już taki login!\n");
+					write(client->cfd, "serwer:REGERR:Istnieje już taki login.", 38);
+					ifOk=0;
+					break;
+				}
+			}
+			if(ifOk==1)
+			{
+				printf("Zapisuje: %s %s\n", login, password);
+				write(client->cfd, "serwer:REGOK:", 13);
+				fprintf(loginy,"%s %s\n", login, password);
+			}
+			
+			fclose(loginy);
+		}
+		else if(strncmp(code, "MSG", 3)==0)
+		{
+			
+		}
+		else if(strncmp(code, "ADD", 3)==0)
+		{
+			
+		}
 	}
 }
 
